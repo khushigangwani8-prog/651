@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta charset="utf-8">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;1,400&family=Caveat:wght@600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0c0a08;
+    --bg-alt: #151109;
+    --paper: #1d1710;
+    --paper-2: #241c12;
+    --cream: #efe6d3;
+    --cream-dim: #cabfa6;
+    --muted: #8d8168;
+    --gold: #c9a15a;
+    --syrup: #e0793a;
+    --redact: #b5342a;
+    --redact-glow: rgba(181,52,42,.45);
+    --line: rgba(239,230,211,.14);
+    --line-strong: rgba(239,230,211,.28);
+    --shadow: 0 30px 80px -20px rgba(0,0,0,.75);
+    --radius: 18px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse 90% 60% at 50% -10%, rgba(224,121,58,.10), transparent 60%),
+      radial-gradient(ellipse 70% 50% at 90% 100%, rgba(201,161,90,.06), transparent 60%),
+      var(--bg);
+    color:var(--cream);
+    font-family:'IBM Plex Mono', ui-monospace, monospace;
+    min-height:100vh;
+    overflow-x:hidden;
+    position:relative;
+  }
+  /* fine grain / paper noise */
+  body::before{
+    content:"";
+    position:fixed; inset:0; pointer-events:none; z-index:1;
+    background-image:radial-gradient(rgba(239,230,211,.035) 1px, transparent 1px);
+    background-size:3px 3px;
+    mix-blend-mode:overlay;
+    opacity:.5;
+  }
+  .display{font-family:'Bebas Neue', sans-serif; letter-spacing:.02em;}
+  .hand{font-family:'Caveat', cursive;}
+  a{color:inherit;}
+  ::selection{background:var(--syrup); color:#1a1206;}
+
+  .app{position:relative; z-index:2; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:32px 18px;}
+
+  .screen{
+    width:100%;
+    max-width:760px;
+    display:none;
+    animation: rise .7s cubic-bezier(.16,1,.3,1) both;
+  }
+  .screen.active{display:block;}
+  @keyframes rise{
+    from{opacity:0; transform:translateY(26px) scale(.985);}
+    to{opacity:1; transform:translateY(0) scale(1);}
+  }
+  .fade-out{animation: fade-out .35s ease both !important;}
+  @keyframes fade-out{to{opacity:0; transform:translateY(-14px) scale(.98);}}
+
+  /* ---------- shared dossier chrome ---------- */
+  .case-tag{
+    display:inline-flex; align-items:center; gap:10px;
+    font-size:12px; letter-spacing:.28em; text-transform:uppercase;
+    color:var(--muted); margin-bottom:18px;
+  }
+  .case-tag .dot{width:6px;height:6px;border-radius:50%;background:var(--syrup); box-shadow:0 0 10px var(--syrup); animation:pulse 1.8s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
+
+  .stamp{
+    position:absolute; top:18px; right:18px;
+    border:2.5px solid var(--redact);
+    color:var(--redact);
+    font-family:'Bebas Neue', sans-serif;
+    font-size:13px; letter-spacing:.18em;
+    padding:6px 12px;
+    border-radius:4px;
+    transform:rotate(8deg);
+    opacity:.85;
+    text-shadow:0 0 8px var(--redact-glow);
+    box-shadow:0 0 0 1px rgba(181,52,42,.15) inset;
+    user-select:none;
+    pointer-events:none;
+  }
+
+  .card{
+    position:relative;
+    background:linear-gradient(160deg, var(--paper), var(--paper-2));
+    border:1px solid var(--line);
+    border-radius:var(--radius);
+    padding:38px 34px;
+    box-shadow:var(--shadow);
+    overflow:hidden;
+  }
+  .card::before{
+    content:"";
+    position:absolute; inset:0;
+    background:linear-gradient(120deg, rgba(201,161,90,.06), transparent 40%);
+    pointer-events:none;
+  }
+
+  h1.title{
+    font-size:clamp(40px, 8vw, 68px);
+    line-height:.98;
+    margin:0 0 8px;
+    color:var(--cream);
+  }
+  h2.title{
+    font-size:clamp(32px, 6vw, 46px);
+    line-height:1;
+    margin:0 0 14px;
+    color:var(--cream);
+  }
+  .sub{
+    color:var(--cream-dim);
+    font-size:15.5px;
+    line-height:1.65;
+    max-width:52ch;
+  }
+  .accent{color:var(--syrup);}
+  .gold{color:var(--gold);}
+
+  .btn{
+    appearance:none; border:none; cursor:pointer;
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:600; letter-spacing:.06em;
+    font-size:13.5px; text-transform:uppercase;
+    padding:16px 26px;
+    border-radius:12px;
+    display:inline-flex; align-items:center; gap:10px;
+    transition:transform .18s ease, box-shadow .18s ease, background .18s ease, border-color .18s ease;
+  }
+  .btn:active{transform:translateY(1px) scale(.99);}
+  .btn-primary{
+    background:linear-gradient(135deg, var(--syrup), #c65f27);
+    color:#180f06;
+    box-shadow:0 10px 30px -8px rgba(224,121,58,.55);
+  }
+  .btn-primary:hover{box-shadow:0 14px 34px -6px rgba(224,121,58,.7); transform:translateY(-2px);}
+  .btn-ghost{
+    background:transparent;
+    color:var(--cream);
+    border:1.5px solid var(--line-strong);
+  }
+  .btn-ghost:hover{border-color:var(--gold); color:var(--gold); transform:translateY(-2px);}
+  .btn-declined{
+    background:transparent;
+    color:var(--muted);
+    border:1.5px solid rgba(181,52,42,.4);
+  }
+  .btn-declined:hover{border-color:var(--redact); color:var(--redact);}
+  .btn[disabled]{opacity:.4; cursor:not-allowed; transform:none !important;}
+
+  .row-btns{display:flex; flex-wrap:wrap; gap:14px; margin-top:28px;}
+
+  /* ---------- 1. intro ---------- */
+  .intro-wrap{text-align:left;}
+  .intro-eyebrow{
+    font-size:12px; letter-spacing:.32em; text-transform:uppercase; color:var(--redact);
+    display:flex; align-items:center; gap:10px; margin-bottom:22px;
+  }
+  .intro-eyebrow::before{content:""; width:22px; height:1px; background:var(--redact);}
+  .redacted{
+    display:inline-block; background:var(--cream); color:var(--cream);
+    border-radius:2px; padding:0 4px; margin:0 2px;
+  }
+
+  /* ---------- 2. dossier stats ---------- */
+  .stat-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin:30px 0;}
+  .stat{
+    background:rgba(0,0,0,.22);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:20px 14px;
+    text-align:center;
+  }
+  .stat .icon{font-size:26px; display:block; margin-bottom:8px;}
+  .stat .val{font-family:'Bebas Neue'; font-size:26px; color:var(--gold); letter-spacing:.03em;}
+  .stat .lbl{font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); margin-top:4px;}
+
+  .listing-card{
+    display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;
+    background:rgba(0,0,0,.25);
+    border:1px dashed var(--line-strong);
+    border-radius:14px;
+    padding:18px 20px;
+    margin-top:10px;
+  }
+  .listing-card .li-left{display:flex; align-items:center; gap:14px;}
+  .listing-card .pin{
+    width:42px;height:42px;border-radius:10px;
+    background:linear-gradient(135deg, var(--syrup), var(--redact));
+    display:flex;align-items:center;justify-content:center; font-size:18px; flex-shrink:0;
+  }
+  .listing-card .li-name{font-family:'Bebas Neue'; font-size:19px; letter-spacing:.02em; color:var(--cream);}
+  .listing-card .li-sub{font-size:11.5px; color:var(--muted); letter-spacing:.04em;}
+  .listing-link{
+    text-decoration:none; font-size:12px; letter-spacing:.1em; text-transform:uppercase; font-weight:600;
+    color:var(--gold); border:1.5px solid rgba(201,161,90,.4); padding:10px 16px; border-radius:10px;
+    white-space:nowrap; transition:all .18s ease;
+  }
+  .listing-link:hover{background:var(--gold); color:#1a1206; border-color:var(--gold);}
+
+  /* ---------- 3. vote ---------- */
+  .subject-badge{
+    display:inline-flex; align-items:center; gap:12px;
+    background:rgba(0,0,0,.25); border:1px solid var(--line);
+    border-radius:100px; padding:9px 18px 9px 9px; margin-bottom:26px;
+  }
+  .subject-badge .emoji-ring{
+    width:38px;height:38px;border-radius:50%;
+    background:radial-gradient(circle at 30% 30%, #2a2114, #14100b);
+    display:flex; align-items:center; justify-content:center; font-size:17px;
+    border:1px solid var(--line-strong);
+  }
+  .subject-badge .txt{font-size:11px; letter-spacing:.2em; text-transform:uppercase; color:var(--muted);}
+  .subject-badge b{color:var(--cream); letter-spacing:.06em;}
+
+  .vote-panel{display:none;}
+  .vote-panel.active{display:block; animation:rise .5s cubic-bezier(.16,1,.3,1) both;}
+
+  .reconsider-box{
+    margin-top:26px; padding:20px; border-radius:14px;
+    background:rgba(181,52,42,.07); border:1px solid rgba(181,52,42,.25);
+  }
+  .reconsider-box p{margin:0 0 6px; color:var(--cream-dim); font-size:14.5px;}
+
+  /* ---------- 4. financial ---------- */
+  .fin-grid{display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-top:24px;}
+  @media (max-width:600px){.fin-grid{grid-template-columns:1fr;}}
+  .fin-card{
+    background:rgba(0,0,0,.22);
+    border:1.5px solid var(--line);
+    border-radius:16px;
+    padding:24px 20px;
+    cursor:pointer;
+    transition:all .2s ease;
+    display:flex; flex-direction:column; justify-content:space-between; gap:16px;
+  }
+  .fin-card:hover{border-color:var(--line-strong); transform:translateY(-3px);}
+  .fin-card.selected{
+    border-color:var(--syrup);
+    background:linear-gradient(160deg, rgba(224,121,58,.13), rgba(224,121,58,.03));
+    box-shadow:0 0 0 1px rgba(224,121,58,.35), 0 18px 40px -18px rgba(224,121,58,.5);
+  }
+  .fin-card .fin-title{font-family:'Bebas Neue'; font-size:22px; letter-spacing:.02em; color:var(--cream);}
+  .fin-card p{font-size:13.5px; color:var(--cream-dim); line-height:1.6; margin:10px 0 0;}
+  .fin-card .check{
+    align-self:flex-end; width:26px;height:26px;border-radius:50%;
+    border:1.5px solid var(--line-strong); position:relative; flex-shrink:0;
+  }
+  .fin-card.selected .check{border-color:var(--syrup); background:var(--syrup);}
+  .fin-card.selected .check::after{
+    content:"✓"; position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    font-size:14px; color:#1a1206; font-weight:700;
+  }
+
+  /* ---------- 5. schedule ---------- */
+  .field{margin-bottom:22px;}
+  .field label{
+    display:block; font-size:11px; letter-spacing:.16em; text-transform:uppercase; color:var(--muted);
+    margin-bottom:9px;
+  }
+  .field input[type="date"], .field input[type="time"], .field textarea{
+    width:100%; background:rgba(0,0,0,.28); border:1px solid var(--line-strong);
+    border-radius:12px; padding:13px 14px; color:var(--cream); font-family:inherit; font-size:14px;
+    outline:none; transition:border-color .18s ease;
+  }
+  .field input:focus, .field textarea:focus{border-color:var(--gold);}
+  .field textarea{resize:vertical; min-height:78px; line-height:1.5;}
+  .flex-opts{display:flex; flex-wrap:wrap; gap:10px;}
+  .chip{
+    border:1.5px solid var(--line-strong); border-radius:100px; padding:10px 16px;
+    font-size:12.5px; letter-spacing:.03em; cursor:pointer; color:var(--cream-dim);
+    transition:all .18s ease; background:rgba(0,0,0,.2);
+  }
+  .chip:hover{border-color:var(--gold);}
+  .chip.selected{background:var(--gold); border-color:var(--gold); color:#1a1206; font-weight:600;}
+  .divider-or{
+    display:flex; align-items:center; gap:14px; margin:26px 0 18px; color:var(--muted); font-size:11px;
+    letter-spacing:.2em; text-transform:uppercase;
+  }
+  .divider-or::before, .divider-or::after{content:""; flex:1; height:1px; background:var(--line);}
+
+  /* ---------- 6. confirmation ---------- */
+  .confirm-wrap{text-align:center;}
+  .confirm-emoji{font-size:64px; display:block; margin-bottom:6px; filter:drop-shadow(0 10px 20px rgba(224,121,58,.35));}
+  .confirm-wrap .sub{margin:0 auto;}
+  .confirm-log{
+    margin-top:26px; text-align:left; background:rgba(0,0,0,.25); border:1px solid var(--line);
+    border-radius:14px; padding:18px 20px; font-size:12.5px; color:var(--cream-dim); line-height:1.9;
+  }
+  .confirm-log .lk{color:var(--muted);}
+  .confirm-log .lv{color:var(--cream); font-weight:600;}
+  .typing{
+    display:inline-block; overflow:hidden; white-space:nowrap; border-right:2px solid var(--syrup);
+    animation: typing 1.6s steps(28,end), blink .8s step-end infinite;
+  }
+  @keyframes typing{from{width:0}to{width:100%}}
+  @keyframes blink{50%{border-color:transparent;}}
+
+  .foot-note{margin-top:26px; font-size:11px; color:var(--muted); letter-spacing:.05em;}
+
+  /* progress ticks */
+  .ticks{display:flex; gap:6px; margin-bottom:26px;}
+  .ticks span{height:3px; flex:1; background:var(--line); border-radius:2px; overflow:hidden; position:relative;}
+  .ticks span.done{background:var(--syrup);}
+  .ticks span.now::after{
+    content:""; position:absolute; inset:0; background:var(--gold); animation:fillTick 1s ease both;
+  }
+  @keyframes fillTick{from{transform:scaleX(0);} to{transform:scaleX(1);}}
+  .ticks span{transform-origin:left;}
+
+  @media (max-width:600px){
+    .card{padding:28px 20px;}
+    .stat-grid{grid-template-columns:1fr 1fr 1fr; gap:8px;}
+    .stat{padding:14px 8px;}
+    .stat .val{font-size:20px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ============ SCREEN 1 — INTRO ============ -->
+  <section class="screen active" id="screen-intro">
+    <div class="card intro-wrap">
+      <div class="stamp">CLASSIFIED</div>
+      <div class="intro-eyebrow">Case File No. 0651 — Eyes Only</div>
+      <h1 class="title">WE NEED<br>TO TALK.</h1>
+      <p class="sub">There is a <span class="accent">pancake situation.</span> It requires your immediate and undivided attention. This is not a drill. This is brunch.</p>
+      <div class="row-btns">
+        <button class="btn btn-primary" onclick="goTo('screen-dossier')">ENTER THE MISSION →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SCREEN 2 — DOSSIER ============ -->
+  <section class="screen" id="screen-dossier">
+    <div class="card">
+      <div class="case-tag"><span class="dot"></span> EXHIBIT A — TARGET LOCATION</div>
+      <h2 class="title">Café 651 has been<br><span class="accent">selected.</span></h2>
+      <p class="sub">Field assessment confirms questionable aesthetics, offset by pancakes of reportedly excellent — possibly suspicious — quality. Proceed with appetite.</p>
+
+      <div class="stat-grid">
+        <div class="stat"><span class="icon">🥞</span><span class="val">9.7/10</span><span class="lbl">Pancake Potential</span></div>
+        <div class="stat"><span class="icon">🏛️</span><span class="val">???/10</span><span class="lbl">Aesthetics</span></div>
+        <div class="stat"><span class="icon">👯</span><span class="val">3/3</span><span class="lbl">Friends Required</span></div>
+      </div>
+
+      <div class="listing-card">
+        <div class="li-left">
+          <div class="pin">📍</div>
+          <div>
+            <div class="li-name">Café 651</div>
+            <div class="li-sub">Google listing on file</div>
+          </div>
+        </div>
+        <a class="listing-link" href="https://share.google/hOCPbyRTx2Sa10NVW" target="_blank" rel="noopener">VIEW THE GOOGLE LISTING ↗</a>
+      </div>
+
+      <div class="row-btns">
+        <button class="btn btn-primary" onclick="goTo('screen-vote')">I'VE SEEN ENOUGH →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SCREEN 3 — VOTE ============ -->
+  <section class="screen" id="screen-vote">
+    <div class="card">
+      <div class="case-tag"><span class="dot"></span> EXHIBIT B — SUBJECT RESPONSE</div>
+
+      <div class="subject-badge">
+        <div class="emoji-ring" id="subject-emoji">🕵️</div>
+        <div class="txt">Subject on file — <b id="subject-label">UNIDENTIFIED</b></div>
+      </div>
+
+      <div class="vote-panel active" id="vote-ask">
+        <h2 class="title">Are you joining the<br>pancake mission?</h2>
+        <div class="row-btns">
+          <button class="btn btn-primary" onclick="chooseVote('yes')">🥞 YES, OBVIOUSLY</button>
+          <button class="btn btn-declined" onclick="chooseVote('no')">🚫 NO, UNFORTUNATELY</button>
+        </div>
+      </div>
+
+      <div class="vote-panel" id="vote-no">
+        <h2 class="title">Interesting.</h2>
+        <p class="sub">We respect your decision. We do not understand it.</p>
+        <div class="reconsider-box">
+          <p>The pancakes will remember this.</p>
+        </div>
+        <div class="row-btns">
+          <button class="btn btn-primary" onclick="reconsider()">I HAVE RECONSIDERED</button>
+          <button class="btn btn-ghost" id="btn-confirm-no" onclick="submitDecline()">CONFIRM: I WILL NOT ATTEND</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SCREEN 4 — FINANCIAL ============ -->
+  <section class="screen" id="screen-financial">
+    <div class="card">
+      <div class="case-tag"><span class="dot"></span> EXHIBIT C — FINANCIAL SITUATION</div>
+      <h2 class="title">THE FINANCIAL<br>SITUATION</h2>
+      <p class="sub">There are two possible timelines for this highly important pancake expedition. Choose one.</p>
+
+      <div class="fin-grid">
+        <div class="fin-card" id="fin-before" onclick="selectFinancial('before')">
+          <div>
+            <div class="fin-title">💸 BEFORE 1 SEPTEMBER</div>
+            <p>I will unfortunately be operating on a limited pancake budget. If we go before 1 September, you may have to sponsor my pancakes.</p>
+          </div>
+          <div class="check"></div>
+        </div>
+        <div class="fin-card" id="fin-after" onclick="selectFinancial('after')">
+          <div>
+            <div class="fin-title">💳 1 SEPTEMBER OR AFTER</div>
+            <p>Excellent news. I will be able to contribute to the pancake operation.</p>
+          </div>
+          <div class="check"></div>
+        </div>
+      </div>
+
+      <div class="row-btns">
+        <button class="btn btn-primary" id="btn-fin-continue" disabled onclick="goTo('screen-schedule')">CONTINUE →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SCREEN 5 — SCHEDULE ============ -->
+  <section class="screen" id="screen-schedule">
+    <div class="card">
+      <div class="case-tag"><span class="dot"></span> EXHIBIT D — SCHEDULING</div>
+      <h2 class="title">OKAY. WHEN<br>SHOULD WE GO?</h2>
+
+      <div class="field">
+        <label for="pref-date">Preferred date</label>
+        <input type="date" id="pref-date">
+      </div>
+      <div class="field">
+        <label for="pref-time">Preferred time</label>
+        <input type="time" id="pref-time">
+      </div>
+      <div class="field">
+        <label>How flexible are you?</label>
+        <div class="flex-opts" id="flex-opts">
+          <div class="chip" data-val="Very specific" onclick="selectFlex(this)">Very specific</div>
+          <div class="chip" data-val="Somewhat flexible" onclick="selectFlex(this)">Somewhat flexible</div>
+          <div class="chip" data-val="Anytime, just tell me" onclick="selectFlex(this)">Anytime, just tell me</div>
+        </div>
+      </div>
+
+      <div class="divider-or">or just tell us what works</div>
+
+      <div class="field">
+        <textarea id="pref-notes" placeholder="e.g. Any weekend morning works for me."></textarea>
+      </div>
+
+      <div class="row-btns">
+        <button class="btn btn-primary" id="btn-submit" onclick="submitMission()">SUBMIT MY AVAILABILITY →</button>
+      </div>
+      <p class="foot-note" id="schedule-warning" style="display:none; color:var(--redact);">Give us a date/time, or a note in the free-text field — the council needs something to work with.</p>
+    </div>
+  </section>
+
+  <!-- ============ SCREEN 6 — CONFIRMATION ============ -->
+  <section class="screen" id="screen-confirm">
+    <div class="card confirm-wrap">
+      <span class="confirm-emoji" id="confirm-emoji">🥞</span>
+      <h2 class="title" id="confirm-title">MISSION<br>ACCEPTED.</h2>
+      <p class="sub" id="confirm-sub" style="margin-left:auto;margin-right:auto;">Your response has been securely added to the Pancake Council's records.</p>
+      <p class="hand" id="confirm-line" style="font-size:22px; color:var(--gold); margin-top:14px;">The council will now deliberate.</p>
+      <div class="confirm-log" id="confirm-log"></div>
+      <p class="foot-note" id="save-status">Filing report…</p>
+    </div>
+  </section>
+
+</div>
+
+<script>
+  /* ---------- state ---------- */
+  var SERVER_PERSON = <?!= JSON.stringify(person || '') ?>;
+
+  var PEOPLE = {
+    person1: { emoji: '✈️⚽', label: 'SUBJECT 01' },
+    person2: { emoji: '🙏',   label: 'SUBJECT 02' },
+    person3: { emoji: '🥛📷', label: 'SUBJECT 03' }
+  };
+
+  function getPersonKey(){
+    if (SERVER_PERSON) return SERVER_PERSON;
+    try{
+      var params = new URLSearchParams(window.location.search);
+      return params.get('person') || '';
+    }catch(e){ return ''; }
+  }
+
+  var state = {
+    person: getPersonKey(),
+    response: '',
+    financial: '',
+    flexibility: ''
+  };
+
+  /* ---------- section transitions ---------- */
+  function goTo(id){
+    var current = document.querySelector('.screen.active');
+    var next = document.getElementById(id);
+    if (current === next) return;
+    if (current){
+      current.classList.add('fade-out');
+      setTimeout(function(){
+        current.classList.remove('active','fade-out');
+        next.classList.add('active');
+        window.scrollTo({top:0, behavior:'smooth'});
+      }, 320);
+    } else {
+      next.classList.add('active');
+    }
+  }
+
+  /* ---------- subject badge ---------- */
+  (function initSubject(){
+    var p = PEOPLE[state.person];
+    if (p){
+      document.getElementById('subject-emoji').textContent = p.emoji;
+      document.getElementById('subject-label').textContent = p.label;
+    } else {
+      document.getElementById('subject-emoji').textContent = '🕵️';
+      document.getElementById('subject-label').textContent = 'UNIDENTIFIED';
+    }
+  })();
+
+  /* ---------- vote ---------- */
+  function chooseVote(val){
+    state.response = val;
+    if (val === 'yes'){
+      goTo('screen-financial');
+    } else {
+      document.getElementById('vote-ask').classList.remove('active');
+      document.getElementById('vote-no').classList.add('active');
+    }
+  }
+  function reconsider(){
+    document.getElementById('vote-no').classList.remove('active');
+    document.getElementById('vote-ask').classList.add('active');
+    state.response = '';
+  }
+  function submitDecline(){
+    state.response = 'no';
+    var btn = document.getElementById('btn-confirm-no');
+    btn.disabled = true;
+    btn.textContent = 'FILING…';
+    sendToSheet();
+  }
+
+  /* ---------- financial ---------- */
+  function selectFinancial(val){
+    state.financial = (val === 'before') ? 'Before 1 September (sponsorship requested)' : '1 September or after (can contribute)';
+    document.getElementById('fin-before').classList.toggle('selected', val === 'before');
+    document.getElementById('fin-after').classList.toggle('selected', val === 'after');
+    document.getElementById('btn-fin-continue').disabled = false;
+  }
+
+  /* ---------- schedule ---------- */
+  function selectFlex(el){
+    document.querySelectorAll('#flex-opts .chip').forEach(function(c){ c.classList.remove('selected'); });
+    el.classList.add('selected');
+    state.flexibility = el.getAttribute('data-val');
+  }
+
+  function submitMission(){
+    var date = document.getElementById('pref-date').value;
+    var time = document.getElementById('pref-time').value;
+    var notes = document.getElementById('pref-notes').value.trim();
+
+    if (!date && !time && !notes){
+      document.getElementById('schedule-warning').style.display = 'block';
+      return;
+    }
+    document.getElementById('schedule-warning').style.display = 'none';
+
+    state.date = date;
+    state.time = time;
+    state.notes = notes;
+
+    var btn = document.getElementById('btn-submit');
+    btn.disabled = true;
+    btn.textContent = 'FILING REPORT…';
+
+    sendToSheet();
+  }
+
+  /* ---------- submission ---------- */
+  function sendToSheet(){
+    var payload = {
+      person: (PEOPLE[state.person] ? PEOPLE[state.person].label : state.person) || '(unknown)',
+      response: state.response === 'yes' ? 'Yes' : 'No',
+      financial: state.financial || '',
+      date: state.date || '',
+      time: state.time || '',
+      flexibility: state.flexibility || '',
+      notes: state.notes || ''
+    };
+
+    renderConfirmation(payload);
+    goTo('screen-confirm');
+
+    if (window.google && google.script && google.script.run){
+      google.script.run
+        .withSuccessHandler(function(){ setSaveStatus(true); })
+        .withFailureHandler(function(){ setSaveStatus(false); })
+        .submitResponse(payload);
+    } else {
+      // local preview fallback (outside Apps Script environment)
+      setTimeout(function(){ setSaveStatus(true); }, 700);
+    }
+  }
+
+  function setSaveStatus(ok){
+    var el = document.getElementById('save-status');
+    el.textContent = ok ? 'Report filed. Records updated.' : 'Filed locally — sheet sync failed. Tell the person who set this up.';
+    el.style.color = ok ? '' : 'var(--redact)';
+  }
+
+  function renderConfirmation(payload){
+    var isYes = payload.response === 'Yes';
+    document.getElementById('confirm-emoji').textContent = isYes ? '🥞' : '🗂️';
+    document.getElementById('confirm-title').innerHTML = isYes ? 'MISSION<br>ACCEPTED.' : 'RESPONSE<br>ON FILE.';
+    document.getElementById('confirm-sub').textContent = isYes
+      ? "Your response has been securely added to the Pancake Council's records."
+      : "Your decline has been logged. The council is disappointed, not surprised.";
+    document.getElementById('confirm-line').textContent = isYes
+      ? 'The council will now deliberate.'
+      : 'The pancakes will proceed without you.';
+
+    var log = document.getElementById('confirm-log');
+    var rows = [
+      ['Subject', payload.person],
+      ['Status', payload.response]
+    ];
+    if (isYes){
+      rows.push(['Financial window', payload.financial || '—']);
+      if (payload.date) rows.push(['Preferred date', payload.date]);
+      if (payload.time) rows.push(['Preferred time', payload.time]);
+      if (payload.flexibility) rows.push(['Flexibility', payload.flexibility]);
+      if (payload.notes) rows.push(['Notes', payload.notes]);
+    }
+    log.innerHTML = rows.map(function(r){
+      return '<div><span class="lk">' + r[0] + ': </span><span class="lv">' + escapeHtml(r[1]) + '</span></div>';
+    }).join('');
+  }
+
+  function escapeHtml(str){
+    return String(str).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+</script>
+
+</body>
+</html>
